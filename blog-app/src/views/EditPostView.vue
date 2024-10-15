@@ -11,7 +11,9 @@
 </template>
 
 <script>
-import { getPost } from '../composables/getPost';
+// Import Firestore utilities
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { db } from '../firebase';  // Import the Firebase Firestore configuration
 
 export default {
   name: 'EditPostView',
@@ -24,25 +26,41 @@ export default {
   },
   async created() {
     const postId = this.$route.params.id;
-    const post = await getPost(postId);
-    this.title = post.title;
-    this.body = post.body;
-    this.tags = post.tags.join(', ');
+
+    // Fetch the existing post data from Firestore
+    const postRef = doc(db, 'posts', postId);
+    const postSnap = await getDoc(postRef);
+
+    if (postSnap.exists()) {
+      const post = postSnap.data();
+      this.title = post.title;
+      this.body = post.body;
+      this.tags = post.tags.join(', ');
+    } else {
+      console.error("Post not found");
+    }
   },
   methods: {
     async updatePost() {
-      const postId = this.$route.params.id;
-      const updatedPost = {
-        title: this.title,
-        body: this.body,
-        tags: this.tags.split(',').map(tag => tag.trim())
-      };
-      await fetch(`http://localhost:3000/posts/${postId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedPost)
-      });
-      this.$router.push(`/posts/${postId}`);
+      try {
+        const postId = this.$route.params.id;
+
+        // Create an updated post object
+        const updatedPost = {
+          title: this.title,
+          body: this.body,
+          tags: this.tags.split(',').map(tag => tag.trim())
+        };
+
+        // Update the post in Firestore
+        const postRef = doc(db, 'posts', postId);
+        await updateDoc(postRef, updatedPost);
+
+        // Redirect to the post detail page after update
+        this.$router.push(`/posts/${postId}`);
+      } catch (error) {
+        console.error("Error updating document: ", error);
+      }
     }
   }
 }

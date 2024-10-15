@@ -1,6 +1,12 @@
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "../firebase"; // Adjust the path if needed
+
 export async function getPosts() {
-    const response = await fetch('http://localhost:3000/posts');
-    const posts = await response.json();
-    return posts;
-  }
-  
+  const postsCollection = collection(db, "posts");  // Points to your "posts" collection
+  const postsSnapshot = await getDocs(postsCollection);
+  const postsList = postsSnapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  }));
+  return postsList;
+}
